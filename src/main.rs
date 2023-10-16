@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 pub mod utils;
+pub mod vector2D;
 
 const IMAGE_WIDTH: u32 = 32;
 const IMAGE_HEIGHT: u32 = 42;
@@ -39,7 +40,6 @@ fn render(
     texture: &Texture,
     player: &Player,
 ) -> Result<(), String> {
-    let color = Color::RGB(0, 0, 0);
     canvas.set_draw_color(color);
     canvas.clear();
 
