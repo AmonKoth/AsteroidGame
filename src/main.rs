@@ -1,11 +1,14 @@
-use sdl2::event::Event;
+use sdl2::event::{self, Event};
 use sdl2::image::{InitFlag, LoadTexture};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, WindowCanvas};
 
+use std::collections::HashMap;
 use std::time::Duration;
+
+pub mod utils;
 
 const IMAGE_WIDTH: u32 = 32;
 const IMAGE_HEIGHT: u32 = 42;
@@ -14,11 +17,20 @@ const OUTPUTH_HEIGHT: u32 = 100;
 
 const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
+const PLAYER_MOVE_SPEED: i32 = 5;
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
 
 struct Player {
     position: Point,
     sprite: Rect,
     speed: i32,
+    direction: Direction,
 }
 
 fn render(
@@ -43,6 +55,24 @@ fn render(
 
     canvas.present();
     Ok(())
+}
+
+fn update_player(player: &mut Player) {
+    use self::Direction::*;
+    match player.direction {
+        Left => {
+            player.position = player.position.offset(-player.speed, 0);
+        }
+        Right => {
+            player.position = player.position.offset(player.speed, 0);
+        }
+        Up => {
+            player.position = player.position.offset(0, -player.speed);
+        }
+        Down => {
+            player.position = player.position.offset(0, player.speed);
+        }
+    }
 }
 
 fn main() -> Result<(), String> {
@@ -86,8 +116,10 @@ fn main() -> Result<(), String> {
         position: Point::new(0, 0),
         sprite: Rect::new(0, 0, 32, 42),
         speed: 5,
+        direction: Direction::Right,
     };
     let mut event_pump = sdl_context.event_pump()?;
+    let mut key_manager: HashMap<String, bool> = HashMap::new();
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -98,34 +130,38 @@ fn main() -> Result<(), String> {
                 } => {
                     break 'running;
                 }
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    player.position = player.position.offset(-player.speed, 0);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => {
-                    player.position = player.position.offset(player.speed, 0);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::W),
-                    ..
-                } => {
-                    player.position = player.position.offset(0, -player.speed);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::S),
-                    ..
-                } => {
-                    player.position = player.position.offset(0, player.speed);
-                }
+                Event::KeyDown { keycode, .. } => match keycode {
+                    None => {}
+                    Some(key) => {
+                        utils::key_down(&mut key_manager, key.to_string());
+                    }
+                },
+                Event::KeyUp { keycode, .. } => match keycode {
+                    None => {}
+                    Some(key) => {
+                        utils::key_up(&mut key_manager, key.to_string());
+                    }
+                },
 
                 _ => {}
             }
+            if utils::is_key_pressed(&key_manager, "W") {
+                player.direction = Direction::Up;
+                player.speed = PLAYER_MOVE_SPEED;
+            } else if utils::is_key_pressed(&key_manager, "S") {
+                player.direction = Direction::Down;
+                player.speed = PLAYER_MOVE_SPEED;
+            } else if utils::is_key_pressed(&key_manager, "A") {
+                player.direction = Direction::Left;
+                player.speed = PLAYER_MOVE_SPEED;
+            } else if utils::is_key_pressed(&key_manager, "D") {
+                player.direction = Direction::Right;
+                player.speed = PLAYER_MOVE_SPEED;
+            } else {
+                player.speed = 0;
+            }
         }
+        update_player(&mut player);
         render(&mut canvas, Color::RGB(0, 0, 0), &texture, &player)?;
 
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
