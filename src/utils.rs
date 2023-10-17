@@ -1,8 +1,5 @@
 use std::collections::HashMap;
-
-pub fn rad_to_deg(rad: f64) -> f64 {
-    (rad / (2.0 * std::f64::consts::PI)) * 360.0
-}
+use std::vec;
 
 pub fn key_down(key_manager: &mut HashMap<String, bool>, key_name: String) {
     if !key_manager.contains_key(&key_name) {

@@ -1,6 +1,7 @@
-use sdl2::event::{self, Event};
+use sdl2::event::Event;
 use sdl2::image::{InitFlag, LoadTexture};
 use sdl2::keyboard::Keycode;
+use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, WindowCanvas};
@@ -9,12 +10,11 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 pub mod utils;
-pub mod vector2D;
 
-const IMAGE_WIDTH: u32 = 32;
-const IMAGE_HEIGHT: u32 = 42;
-const OUTPUTH_WIDTH: u32 = 100;
-const OUTPUTH_HEIGHT: u32 = 100;
+// const IMAGE_WIDTH: u32 = 32;
+// const IMAGE_HEIGHT: u32 = 42;
+// const OUTPUTH_WIDTH: u32 = 100;
+// const OUTPUTH_HEIGHT: u32 = 100;
 
 const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
@@ -32,6 +32,7 @@ struct Player {
     sprite: Rect,
     speed: i32,
     direction: Direction,
+    rotation: f64,
 }
 
 fn render(
@@ -51,7 +52,16 @@ fn render(
         player.sprite.height(),
     );
 
-    canvas.copy(texture, player.sprite, screen_rect)?;
+    // canvas.copy(texture, player.sprite, screen_rect)?;
+    canvas.copy_ex(
+        texture,
+        player.sprite,
+        screen_rect,
+        player.rotation,
+        None,
+        false,
+        false,
+    )?;
 
     canvas.present();
     Ok(())
@@ -74,6 +84,14 @@ fn update_player(player: &mut Player) {
         }
     }
 }
+fn calculate_agnle(player_position: Point, mouse_position: Point) -> f64 {
+    let delta_x = (mouse_position.x - player_position.x) as f64;
+    let delta_y = (mouse_position.y - player_position.y) as f64;
+    let angle = delta_y.atan2(delta_x);
+
+    let angle_degrees = angle.to_degrees();
+    angle_degrees
+}
 
 fn main() -> Result<(), String> {
     println!("Starting Astroids Game");
@@ -94,10 +112,10 @@ fn main() -> Result<(), String> {
     //     OUTPUTH_WIDTH,
     //     OUTPUTH_HEIGHT,
     // );
-    // let center = Point::new((OUTPUTH_WIDTH / 2) as i32, (OUTPUTH_HEIGHT / 2) as i32);
+    let center = Point::new((SCREEN_WIDTH / 2) as i32, (SCREEN_HEIGHT / 2) as i32);
 
     let window = video_subsystem
-        .window("Astroids", 800, 600)
+        .window("Astroids", SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32)
         .position_centered()
         .build()
         .expect("Failed to crete window Subsytem");
@@ -117,8 +135,10 @@ fn main() -> Result<(), String> {
         sprite: Rect::new(0, 0, 32, 42),
         speed: 5,
         direction: Direction::Right,
+        rotation: 0.0,
     };
     let mut event_pump = sdl_context.event_pump()?;
+    let mut mouse_pos = Point::new(0, 0);
     let mut key_manager: HashMap<String, bool> = HashMap::new();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -142,6 +162,15 @@ fn main() -> Result<(), String> {
                         utils::key_up(&mut key_manager, key.to_string());
                     }
                 },
+                Event::MouseMotion { x, y, .. } => {
+                    mouse_pos.x = x - center.x;
+                    mouse_pos.y = y - center.y;
+                }
+                Event::MouseButtonDown { mouse_btn, .. } => {
+                    if mouse_btn == MouseButton::Left {
+                        println!("FIRE");
+                    }
+                }
 
                 _ => {}
             }
@@ -162,8 +191,9 @@ fn main() -> Result<(), String> {
             }
         }
         update_player(&mut player);
+        let angle = calculate_agnle(player.position, mouse_pos);
+        player.rotation = angle;
         render(&mut canvas, Color::RGB(0, 0, 0), &texture, &player)?;
-
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
