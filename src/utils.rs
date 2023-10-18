@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::vec;
 
 pub fn key_down(key_manager: &mut HashMap<String, bool>, key_name: String) {
     if !key_manager.contains_key(&key_name) {
