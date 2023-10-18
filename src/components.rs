@@ -24,7 +24,6 @@ pub struct Renderable {
     pub output_height: u32,
     pub frame: u32,
     pub total_frames: u32,
-    pub rotation: f64,
 }
 
 #[derive(Component)]

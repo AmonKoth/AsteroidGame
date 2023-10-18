@@ -26,9 +26,16 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     }
 }
 pub fn update_player_rotation(ecs: &mut World, mouse_position: Point) {
-    let mut rotations = ecs.write_storage::<crate::components::Position>();
+    let mut positions = ecs.write_storage::<crate::components::Position>();
     let players = ecs.read_component::<crate::components::Player>();
-    for (rotation, player) in (&mut rotations, &players).join() {}
+    for (rotation, player) in (&mut positions, &players).join() {
+        let delta_x = (mouse_position.x - rotation.pos.x) as f64;
+        let delta_y = (mouse_position.y - rotation.pos.y) as f64;
+        let angle = delta_y.atan2(delta_x);
+
+        let angle_degrees = angle.to_degrees();
+        rotation.rot = angle_degrees
+    }
 }
 
 pub fn load_world(ecs: &mut World) {
@@ -45,7 +52,6 @@ pub fn load_world(ecs: &mut World) {
             output_height: 42,
             frame: 0,
             total_frames: 1,
-            rotation: 0.0,
         })
         .with(crate::components::Player {
             speed: 0,

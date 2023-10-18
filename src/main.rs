@@ -46,15 +46,7 @@ fn render(
         );
         let texture = texture_creator.load_texture(&renderable.texture_name)?;
         let src = Rect::new(0, 0, renderable.input_width, renderable.input_height);
-        canvas.copy_ex(
-            &texture,
-            src,
-            screen_rect,
-            renderable.rotation,
-            None,
-            false,
-            false,
-        )?;
+        canvas.copy_ex(&texture, src, screen_rect, position.rot, None, false, false)?;
     }
     // let (width, height) = canvas.output_size()?;
     // let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
@@ -198,6 +190,7 @@ fn main() -> Result<(), String> {
         }
         update_player(&mut game_state.ecs);
         game::update(&mut game_state.ecs, &mut key_manager);
+        game::update_player_rotation(&mut game_state.ecs, mouse_pos);
         // let angle = calculate_agnle(player.position, mouse_pos);
         // player.rotation = angle;
         render(
