@@ -6,10 +6,11 @@ use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{Texture, TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
-use specs::{Join, World, WorldExt};
+use specs::{DispatcherBuilder, Join, World, WorldExt};
 use std::collections::HashMap;
 use std::time::Duration;
 
+pub mod asteroid;
 pub mod components;
 pub mod game;
 pub mod utils;
@@ -21,7 +22,6 @@ pub mod utils;
 
 const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
-const PLAYER_MOVE_SPEED: i32 = 5;
 
 fn render(
     canvas: &mut WindowCanvas,
@@ -36,17 +36,22 @@ fn render(
     let renderables = ecs.read_storage::<components::Renderable>();
 
     for (renderable, position) in (&renderables, &positions).join() {
-        let (width, height) = canvas.output_size()?;
-        let pos = position.pos;
-        let screen_position = pos + Point::new(width as i32 / 2, height as i32 / 2);
         let screen_rect = Rect::from_center(
-            screen_position,
+            position.pos,
             renderable.input_width,
             renderable.input_height,
         );
         let texture = texture_creator.load_texture(&renderable.texture_name)?;
         let src = Rect::new(0, 0, renderable.input_width, renderable.input_height);
-        canvas.copy_ex(&texture, src, screen_rect, position.rot, None, false, false)?;
+        canvas.copy_ex(
+            &texture,
+            src,
+            screen_rect,
+            renderable.render_rotation,
+            None,
+            false,
+            false,
+        )?;
     }
     // let (width, height) = canvas.output_size()?;
     // let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
@@ -91,16 +96,19 @@ fn update_player(ecs: &World) {
                 position.pos = position.pos.offset(0, player.speed);
             }
         }
+        if position.pos.x > SCREEN_WIDTH {
+            position.pos.x -= SCREEN_WIDTH;
+        }
+        if position.pos.x < 0 {
+            position.pos.x += SCREEN_WIDTH;
+        }
+        if position.pos.y > SCREEN_HEIGHT {
+            position.pos.y -= SCREEN_HEIGHT;
+        }
+        if position.pos.y < 0 {
+            position.pos.y += SCREEN_HEIGHT;
+        }
     }
-}
-
-fn calculate_agnle(player_position: Point, mouse_position: Point) -> f64 {
-    let delta_x = (mouse_position.x - player_position.x) as f64;
-    let delta_y = (mouse_position.y - player_position.y) as f64;
-    let angle = delta_y.atan2(delta_x);
-
-    let angle_degrees = angle.to_degrees();
-    angle_degrees
 }
 
 struct State {
@@ -150,6 +158,12 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Position>();
     game_state.ecs.register::<components::Renderable>();
     game_state.ecs.register::<components::Player>();
+    game_state.ecs.register::<components::Asteroid>();
+
+    let mut dispacher = DispatcherBuilder::new()
+        .with(asteroid::AsteroidMover, "asteroid_mover", &[])
+        .with(asteroid::AstroidCollider, "asteroid_collider", &[])
+        .build();
 
     game::load_world(&mut game_state.ecs);
 
@@ -176,8 +190,8 @@ fn main() -> Result<(), String> {
                     }
                 },
                 Event::MouseMotion { x, y, .. } => {
-                    mouse_pos.x = x - center.x;
-                    mouse_pos.y = y - center.y;
+                    mouse_pos.x = x;
+                    mouse_pos.y = y;
                 }
                 Event::MouseButtonDown { mouse_btn, .. } => {
                     if mouse_btn == MouseButton::Left {
@@ -193,6 +207,8 @@ fn main() -> Result<(), String> {
         game::update_player_rotation(&mut game_state.ecs, mouse_pos);
         // let angle = calculate_agnle(player.position, mouse_pos);
         // player.rotation = angle;
+        dispacher.dispatch(&game_state.ecs);
+        game_state.ecs.maintain();
         render(
             &mut canvas,
             Color::RGB(0, 0, 0),

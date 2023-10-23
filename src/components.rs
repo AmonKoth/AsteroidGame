@@ -24,10 +24,16 @@ pub struct Renderable {
     pub output_height: u32,
     pub frame: u32,
     pub total_frames: u32,
+    pub render_rotation: f64,
 }
 
 #[derive(Component)]
 pub struct Player {
     pub speed: i32,
     pub direction: Direction,
+}
+#[derive(Component)]
+pub struct Asteroid {
+    pub speed: f64,
+    pub rotation_speed: f64,
 }
