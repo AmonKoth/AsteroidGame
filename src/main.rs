@@ -1,10 +1,10 @@
 use sdl2::event::Event;
-use sdl2::image::{InitFlag, LoadTexture};
+use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
-use sdl2::render::{Texture, TextureCreator, WindowCanvas};
+use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 use specs::{DispatcherBuilder, Join, World, WorldExt};
 use std::collections::HashMap;
@@ -13,6 +13,7 @@ use std::time::Duration;
 pub mod asteroid;
 pub mod components;
 pub mod game;
+pub mod rocket;
 pub mod utils;
 
 // const IMAGE_WIDTH: u32 = 32;
@@ -33,16 +34,21 @@ fn render(
     canvas.clear();
 
     let positions = ecs.read_storage::<components::Position>();
-    let renderables = ecs.read_storage::<components::Renderable>();
+    let mut renderables = ecs.write_storage::<components::Renderable>();
 
-    for (renderable, position) in (&renderables, &positions).join() {
+    for (renderable, position) in (&mut renderables, &positions).join() {
         let screen_rect = Rect::from_center(
             position.pos,
             renderable.input_width,
             renderable.input_height,
         );
         let texture = texture_creator.load_texture(&renderable.texture_name)?;
-        let src = Rect::new(0, 0, renderable.input_width, renderable.input_height);
+        let src = Rect::new(
+            (renderable.input_width * renderable.frame) as i32,
+            0,
+            renderable.input_width,
+            renderable.input_height,
+        );
         canvas.copy_ex(
             &texture,
             src,
@@ -52,6 +58,7 @@ fn render(
             false,
             false,
         )?;
+        renderable.frame = (renderable.frame + 1) % renderable.total_frames;
     }
     // let (width, height) = canvas.output_size()?;
     // let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
@@ -133,8 +140,8 @@ fn main() -> Result<(), String> {
     //     y - ((OUTPUTH_HEIGHT / 2) as i32),
     //     OUTPUTH_WIDTH,
     //     OUTPUTH_HEIGHT,
-    // );
-    let center = Point::new((SCREEN_WIDTH / 2) as i32, (SCREEN_HEIGHT / 2) as i32);
+    //  );
+    // let center = Point::new((SCREEN_WIDTH / 2) as i32, (SCREEN_HEIGHT / 2) as i32);
 
     let window = video_subsystem
         .window("Astroids", SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32)
@@ -159,10 +166,12 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Renderable>();
     game_state.ecs.register::<components::Player>();
     game_state.ecs.register::<components::Asteroid>();
+    game_state.ecs.register::<components::Rocket>();
 
     let mut dispacher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
         .with(asteroid::AstroidCollider, "asteroid_collider", &[])
+        .with(rocket::RocketMover, "rocket_mover", &[])
         .build();
 
     game::load_world(&mut game_state.ecs);

@@ -37,3 +37,7 @@ pub struct Asteroid {
     pub speed: f64,
     pub rotation_speed: f64,
 }
+#[derive(Component)]
+pub struct Rocket {
+    pub speed: f64,
+}

@@ -1,4 +1,3 @@
-use sdl2::rect::Point;
 use specs::prelude::Entities;
 use specs::{Join, System, WriteStorage};
 
