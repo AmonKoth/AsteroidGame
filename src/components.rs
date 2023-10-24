@@ -36,8 +36,15 @@ pub struct Player {
 pub struct Asteroid {
     pub speed: f64,
     pub rotation_speed: f64,
+    pub size_multiplier: u32,
 }
 #[derive(Component)]
 pub struct Rocket {
     pub speed: f64,
+}
+
+pub struct PendingAsteroid {
+    pub position: Point,
+    pub rot: f64,
+    pub size_mult: u32,
 }

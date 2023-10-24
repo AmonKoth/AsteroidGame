@@ -10,8 +10,18 @@ use crate::components;
 
 pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     let mut must_reload_world = false;
+    let mut current_player_pos = components::Position {
+        pos: Point::new(0, 0),
+        rot: 0.0,
+    };
     {
         let players = ecs.read_storage::<crate::components::Player>();
+        let positions = ecs.read_storage::<crate::components::Position>();
+
+        for (position, _player) in (&positions, &players).join() {
+            current_player_pos.pos.x = position.pos.x;
+            current_player_pos.pos.y = position.pos.y;
+        }
         if players.join().count() < 1 {
             must_reload_world = true;
         }
@@ -20,6 +30,43 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     if must_reload_world {
         ecs.delete_all();
         load_world(ecs);
+    }
+
+    let mut must_create_astroids = false;
+    {
+        let asteroids = ecs.read_storage::<components::Asteroid>();
+        if asteroids.count() < 1 {
+            must_create_astroids = true;
+        }
+    }
+
+    if must_create_astroids {
+        if current_player_pos.pos.x > (crate::SCREEN_WIDTH / 2).into()
+            && current_player_pos.pos.y < (crate::SCREEN_HEIGHT / 2).into()
+        {
+            current_player_pos.pos.x = crate::SCREEN_WIDTH / 4;
+            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
+            current_player_pos.rot = 225.0;
+        } else if current_player_pos.pos.x < (crate::SCREEN_WIDTH / 2).into()
+            && current_player_pos.pos.y < (crate::SCREEN_HEIGHT / 2).into()
+        {
+            current_player_pos.pos.x = crate::SCREEN_WIDTH - crate::SCREEN_WIDTH / 4;
+            current_player_pos.pos.y = crate::SCREEN_HEIGHT - crate::SCREEN_HEIGHT / 4;
+            current_player_pos.rot = 135.0;
+        } else if current_player_pos.pos.x > (crate::SCREEN_WIDTH / 2).into()
+            && current_player_pos.pos.y > (crate::SCREEN_HEIGHT / 2).into()
+        {
+            current_player_pos.pos.x = crate::SCREEN_WIDTH / 4;
+            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
+            current_player_pos.rot = 315.0;
+        } else if current_player_pos.pos.x < (crate::SCREEN_WIDTH / 2).into()
+            && current_player_pos.pos.y > (crate::SCREEN_HEIGHT / 2).into()
+        {
+            current_player_pos.pos.x = crate::SCREEN_WIDTH - crate::SCREEN_WIDTH / 4;
+            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
+            current_player_pos.rot = 45.0;
+        }
+        create_asteroid(ecs, current_player_pos, 4);
     }
 
     let mut player_position = components::Position {
@@ -100,26 +147,14 @@ pub fn load_world(ecs: &mut World) {
             direction: components::Direction::Right,
         })
         .build();
-    ecs.create_entity()
-        .with(components::Position {
+    create_asteroid(
+        ecs,
+        components::Position {
             pos: Point::new(200, 400),
             rot: 45.0,
-        })
-        .with(components::Renderable {
-            texture_name: String::from("assets/running.png"),
-            input_width: 33,
-            input_height: 45,
-            output_width: 25,
-            output_height: 45,
-            frame: 1,
-            total_frames: 12,
-            render_rotation: 0.0,
-        })
-        .with(crate::components::Asteroid {
-            speed: 4.0,
-            rotation_speed: 0.5,
-        })
-        .build();
+        },
+        2,
+    );
 }
 
 fn fire_rocket(ecs: &mut World, position: components::Position) {
@@ -135,12 +170,33 @@ fn fire_rocket(ecs: &mut World, position: components::Position) {
             texture_name: String::from("assets/rocket.png"),
             input_width: 17,
             input_height: 61,
-            output_width: 17,
+            output_width: 40,
             output_height: 61,
             frame: 0,
             total_frames: 1,
             render_rotation: 0.0,
         })
         .with(components::Rocket { speed: 10.0 })
+        .build();
+}
+
+fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size_mult: u32) {
+    ecs.create_entity()
+        .with(position)
+        .with(components::Renderable {
+            texture_name: String::from("assets/running.png"),
+            input_width: 33,
+            input_height: 45,
+            output_width: 33 * asteroid_size_mult,
+            output_height: 45 * asteroid_size_mult,
+            frame: 1,
+            total_frames: 12,
+            render_rotation: 0.0,
+        })
+        .with(crate::components::Asteroid {
+            speed: 4.0,
+            rotation_speed: 0.5,
+            size_multiplier: asteroid_size_mult,
+        })
         .build();
 }

@@ -1,7 +1,6 @@
 use sdl2::event::Event;
 use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
-use sdl2::mouse::MouseButton;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::{TextureCreator, WindowCanvas};
@@ -39,8 +38,8 @@ fn render(
     for (renderable, position) in (&mut renderables, &positions).join() {
         let screen_rect = Rect::from_center(
             position.pos,
-            renderable.input_width,
-            renderable.input_height,
+            renderable.output_width,
+            renderable.output_height,
         );
         let texture = texture_creator.load_texture(&renderable.texture_name)?;
         let src = Rect::new(
@@ -172,6 +171,7 @@ fn main() -> Result<(), String> {
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
         .with(asteroid::AstroidCollider, "asteroid_collider", &[])
         .with(rocket::RocketMover, "rocket_mover", &[])
+        .with(rocket::RocketDamage, "rocket_damage", &[])
         .build();
 
     game::load_world(&mut game_state.ecs);
@@ -202,12 +202,6 @@ fn main() -> Result<(), String> {
                     mouse_pos.x = x;
                     mouse_pos.y = y;
                 }
-                Event::MouseButtonDown { mouse_btn, .. } => {
-                    if mouse_btn == MouseButton::Left {
-                        println!("FIRE");
-                    }
-                }
-
                 _ => {}
             }
         }
