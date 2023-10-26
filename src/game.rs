@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::current};
 
+use rand::Rng;
 use sdl2::rect::Point;
 use specs::{Builder, Join, World, WorldExt};
 
 const PLAYER_MOVE_SPEED: i32 = 5;
-const MAX_MISSILES: usize = 3;
+const MAX_MISSILES: usize = 5;
 
 use crate::components;
 
@@ -33,40 +34,41 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     }
 
     let mut must_create_astroids = false;
+    let mut number_asteroids: u32 = 0;
     {
         let asteroids = ecs.read_storage::<components::Asteroid>();
         if asteroids.count() < 1 {
             must_create_astroids = true;
+            let mut gamedatas = ecs.write_storage::<components::GameData>();
+            for mut gamedata in (&mut gamedatas).join() {
+                gamedata.level += 1;
+                number_asteroids = (gamedata.level / 3) + 1;
+            }
         }
     }
 
     if must_create_astroids {
-        if current_player_pos.pos.x > (crate::SCREEN_WIDTH / 2).into()
-            && current_player_pos.pos.y < (crate::SCREEN_HEIGHT / 2).into()
-        {
-            current_player_pos.pos.x = crate::SCREEN_WIDTH / 4;
-            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
-            current_player_pos.rot = 225.0;
-        } else if current_player_pos.pos.x < (crate::SCREEN_WIDTH / 2).into()
-            && current_player_pos.pos.y < (crate::SCREEN_HEIGHT / 2).into()
-        {
-            current_player_pos.pos.x = crate::SCREEN_WIDTH - crate::SCREEN_WIDTH / 4;
-            current_player_pos.pos.y = crate::SCREEN_HEIGHT - crate::SCREEN_HEIGHT / 4;
-            current_player_pos.rot = 135.0;
-        } else if current_player_pos.pos.x > (crate::SCREEN_WIDTH / 2).into()
-            && current_player_pos.pos.y > (crate::SCREEN_HEIGHT / 2).into()
-        {
-            current_player_pos.pos.x = crate::SCREEN_WIDTH / 4;
-            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
-            current_player_pos.rot = 315.0;
-        } else if current_player_pos.pos.x < (crate::SCREEN_WIDTH / 2).into()
-            && current_player_pos.pos.y > (crate::SCREEN_HEIGHT / 2).into()
-        {
-            current_player_pos.pos.x = crate::SCREEN_WIDTH - crate::SCREEN_WIDTH / 4;
-            current_player_pos.pos.y = crate::SCREEN_HEIGHT / 4;
-            current_player_pos.rot = 45.0;
+        let mut asteroid_count: u32 = 0;
+        while asteroid_count < number_asteroids {
+            let mut rng = rand::thread_rng();
+            let size = rng.gen_range(1..6);
+            let next_x = rng.gen_range(50..crate::SCREEN_WIDTH - 50);
+            let next_y = rng.gen_range(50..crate::SCREEN_HEIGHT - 50);
+            let next_rot = rng.gen_range(0.0..360.0);
+
+            let diff_x = ((current_player_pos.pos.x - next_x) as f64).abs();
+            let diff_y = ((current_player_pos.pos.y - next_y) as f64).abs();
+            if ((diff_x * diff_x) + (diff_y * diff_y)).sqrt() < 150.0 {
+                continue;
+            }
+            asteroid_count += 1;
+            let new_asteroid = components::Position {
+                pos: Point::new(next_x, next_y),
+                rot: next_rot,
+            };
+
+            create_asteroid(ecs, new_asteroid, size);
         }
-        create_asteroid(ecs, current_player_pos, 4);
     }
 
     let mut player_position = components::Position {
@@ -155,6 +157,9 @@ pub fn load_world(ecs: &mut World) {
         },
         2,
     );
+    ecs.create_entity()
+        .with(components::GameData { score: 0, level: 1 })
+        .build();
 }
 
 fn fire_rocket(ecs: &mut World, position: components::Position) {

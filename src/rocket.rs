@@ -1,4 +1,3 @@
-use sdl2::render;
 use specs::prelude::*;
 use specs::{Entities, Join};
 
@@ -48,12 +47,15 @@ impl<'a> System<'a> for RocketDamage {
         WriteStorage<'a, components::Rocket>,
         WriteStorage<'a, components::Asteroid>,
         WriteStorage<'a, components::Player>,
+        WriteStorage<'a, components::GameData>,
         Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (positions, renderers, rockets, asteroids, _players, entities) = &data;
+        let (positions, renderers, rockets, asteroids, _players, _, entities) = &data;
         let mut asteroid_creation = Vec::<components::PendingAsteroid>::new();
+        let mut score: u32 = 0;
+
         for (rocket_pos, _, _, rocket_entity) in (positions, renderers, rockets, entities).join() {
             for (asteroid_pos, asteroid_render, asteroid, asteroid_entity) in
                 (positions, renderers, asteroids, entities).join()
@@ -62,6 +64,7 @@ impl<'a> System<'a> for RocketDamage {
                 let diff_y: f64 = ((rocket_pos.pos.y - asteroid_pos.pos.y) as f64).abs();
                 let hyp: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
                 if hyp < asteroid_render.output_width as f64 / 2.0 {
+                    score += asteroid.size_multiplier;
                     entities.delete(asteroid_entity).ok();
                     entities.delete(rocket_entity).ok();
                     if asteroid.size_multiplier > 1 {
@@ -80,7 +83,7 @@ impl<'a> System<'a> for RocketDamage {
             }
         }
 
-        let (mut positions, mut renderers, _, mut asteroids, _, entities) = data;
+        let (mut positions, mut renderers, _, mut asteroids, _, _, entities) = data;
         for new_asteroid in asteroid_creation {
             let new_ast = entities.create();
             positions
@@ -117,6 +120,10 @@ impl<'a> System<'a> for RocketDamage {
                     },
                 )
                 .ok();
+        }
+        let (_, _, _, _, _, mut gamedatas, _) = data;
+        for mut gamedata in (&mut gamedatas).join() {
+            gamedata.score += score;
         }
     }
 }

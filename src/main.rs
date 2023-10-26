@@ -7,6 +7,7 @@ use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 use specs::{DispatcherBuilder, Join, World, WorldExt};
 use std::collections::HashMap;
+use std::path::Path;
 use std::time::Duration;
 
 pub mod asteroid;
@@ -27,6 +28,7 @@ fn render(
     canvas: &mut WindowCanvas,
     color: Color,
     texture_creator: &TextureCreator<WindowContext>,
+    font: &sdl2::ttf::Font,
     ecs: &World,
 ) -> Result<(), String> {
     canvas.set_draw_color(color);
@@ -59,26 +61,55 @@ fn render(
         )?;
         renderable.frame = (renderable.frame + 1) % renderable.total_frames;
     }
-    // let (width, height) = canvas.output_size()?;
-    // let screen_position = player.position + Point::new(width as i32 / 2, height as i32 / 2);
-    // let screen_rect = Rect::from_center(
-    //     screen_position,
-    //     player.sprite.width(),
-    //     player.sprite.height(),
-    // );
 
-    // canvas.copy(texture, player.sprite, screen_rect)?;
-    // canvas.copy_ex(
-    //     texture,
-    //     player.sprite,
-    //     screen_rect,
-    //     player.rotation,
-    //     None,
-    //     false,
-    //     false,
-    // )?;
+    let gamedatas = ecs.read_storage::<components::GameData>();
+    for gamedata in (gamedatas).join() {
+        {
+            let score: String = "Score: ".to_string() + &gamedata.score.to_string();
+            let score_text_pos = Rect::new(10 as i32, 0 as i32, 100 as u32, 50 as u32);
+            render_text(
+                &score,
+                score_text_pos,
+                Color::RGBA(255, 0, 0, 255),
+                texture_creator,
+                font,
+                canvas,
+            )?;
+
+            let level: String = "Level: ".to_string() + &gamedata.level.to_string();
+            let level_text_pos =
+                Rect::new(SCREEN_WIDTH / 2 as i32, 0 as i32, 100 as u32, 50 as u32);
+            render_text(
+                &level,
+                level_text_pos,
+                Color::RGBA(255, 0, 0, 255),
+                texture_creator,
+                font,
+                canvas,
+            )?;
+        }
+    }
 
     canvas.present();
+    Ok(())
+}
+
+fn render_text(
+    text: &String,
+    text_position: Rect,
+    color: Color,
+    texture_creator: &TextureCreator<WindowContext>,
+    font: &sdl2::ttf::Font,
+    canvas: &mut WindowCanvas,
+) -> Result<(), String> {
+    let surface = font
+        .render(text)
+        .blended(color)
+        .map_err(|e| e.to_string())?;
+    let texture = texture_creator
+        .create_texture_from_surface(&surface)
+        .map_err(|e| e.to_string())?;
+    canvas.copy(&texture, None, Some(text_position))?;
     Ok(())
 }
 
@@ -155,6 +186,11 @@ fn main() -> Result<(), String> {
 
     let texture_creator = canvas.texture_creator();
 
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+    let font_path: &Path = Path::new(&"assets/Fonts/airstrikeexpand.ttf");
+    let mut font = ttf_context.load_font(font_path, 128)?;
+    font.set_style(sdl2::ttf::FontStyle::BOLD);
+
     let mut event_pump = sdl_context.event_pump()?;
     let mut mouse_pos = Point::new(0, 0);
     let mut key_manager: HashMap<String, bool> = HashMap::new();
@@ -166,6 +202,7 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Player>();
     game_state.ecs.register::<components::Asteroid>();
     game_state.ecs.register::<components::Rocket>();
+    game_state.ecs.register::<components::GameData>();
 
     let mut dispacher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
@@ -216,6 +253,7 @@ fn main() -> Result<(), String> {
             &mut canvas,
             Color::RGB(0, 0, 0),
             &texture_creator,
+            &font,
             &game_state.ecs,
         )?;
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

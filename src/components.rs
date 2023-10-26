@@ -48,3 +48,9 @@ pub struct PendingAsteroid {
     pub rot: f64,
     pub size_mult: u32,
 }
+
+#[derive(Component)]
+pub struct GameData {
+    pub score: u32,
+    pub level: u32,
+}
