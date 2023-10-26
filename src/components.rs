@@ -31,6 +31,7 @@ pub struct Renderable {
 pub struct Player {
     pub speed: i32,
     pub direction: Direction,
+    pub can_take_damage: bool,
 }
 #[derive(Component)]
 pub struct Asteroid {

@@ -60,6 +60,11 @@ impl<'a> System<'a> for AstroidCollider {
     fn run(&mut self, data: Self::SystemData) {
         let (positions, render, players, asteroids, entites) = data;
 
+        for player in (players).join() {
+            if !player.can_take_damage {
+                return;
+            }
+        }
         for (player_pos, player_render, _, entity) in
             (&positions, &render, &players, &entites).join()
         {

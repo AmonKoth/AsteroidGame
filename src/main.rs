@@ -36,7 +36,20 @@ fn render(
 
     let positions = ecs.read_storage::<components::Position>();
     let mut renderables = ecs.write_storage::<components::Renderable>();
+    let players = ecs.read_storage::<components::Player>();
 
+    {
+        let render_count_text = "Entity amount: ".to_string() + &renderables.count().to_string();
+        let text_position = Rect::new(SCREEN_WIDTH - 200, 0, 100, 20);
+        render_text(
+            &render_count_text,
+            text_position,
+            Color::RGBA(0, 255, 0, 255),
+            texture_creator,
+            font,
+            canvas,
+        )?;
+    }
     for (renderable, position) in (&mut renderables, &positions).join() {
         let screen_rect = Rect::from_center(
             position.pos,
@@ -83,6 +96,31 @@ fn render(
                 &level,
                 level_text_pos,
                 Color::RGBA(255, 0, 0, 255),
+                texture_creator,
+                font,
+                canvas,
+            )?;
+        }
+    }
+    for player in (players).join() {
+        let immortality_text: String =
+            "Press C to toggle godmode : ".to_string() + &(!player.can_take_damage).to_string();
+        let text_pos = Rect::new(10, SCREEN_HEIGHT - 50, 300, 50);
+        render_text(
+            &immortality_text,
+            text_pos,
+            Color::RGBA(0, 255, 0, 255),
+            texture_creator,
+            font,
+            canvas,
+        )?;
+        {
+            let spawn_text: String = "Press V to spawn 20 enemies".to_string();
+            let text_pos = Rect::new(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 50, 300, 50);
+            render_text(
+                &spawn_text,
+                text_pos,
+                Color::RGBA(0, 255, 0, 255),
                 texture_creator,
                 font,
                 canvas,

@@ -11,6 +11,7 @@ use crate::components;
 
 pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     let mut must_reload_world = false;
+    let mut create_asteroids_pressed = false;
     let mut current_player_pos = components::Position {
         pos: Point::new(0, 0),
         rot: 0.0,
@@ -37,7 +38,7 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     let mut number_asteroids: u32 = 0;
     {
         let asteroids = ecs.read_storage::<components::Asteroid>();
-        if asteroids.count() < 1 {
+        if asteroids.count() < 1 && !create_asteroids_pressed {
             must_create_astroids = true;
             let mut gamedatas = ecs.write_storage::<components::GameData>();
             for mut gamedata in (&mut gamedatas).join() {
@@ -45,9 +46,16 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
                 number_asteroids = (gamedata.level / 3) + 1;
             }
         }
+        if asteroids.count() as u32 == number_asteroids {
+            create_asteroids_pressed = false;
+        }
     }
-
-    if must_create_astroids {
+    if crate::utils::is_key_pressed(&key_manager, "V") {
+        crate::utils::key_up(key_manager, "V".to_string());
+        number_asteroids += 20;
+        create_asteroids_pressed = true;
+    }
+    if must_create_astroids || create_asteroids_pressed {
         let mut asteroid_count: u32 = 0;
         while asteroid_count < number_asteroids {
             let mut rng = rand::thread_rng();
@@ -97,6 +105,15 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
             } else {
                 player.speed = 0;
             }
+            if crate::utils::is_key_pressed(&key_manager, "C") {
+                crate::utils::key_up(key_manager, "C".to_string());
+                player.can_take_damage = !player.can_take_damage;
+                println!(
+                    "Player can take damage: {}",
+                    player.can_take_damage.to_string()
+                );
+            }
+
             if crate::utils::is_key_pressed(&key_manager, "Space") {
                 must_fire_rocket = true;
                 crate::utils::key_up(key_manager, "Space".to_string());
@@ -147,6 +164,7 @@ pub fn load_world(ecs: &mut World) {
         .with(components::Player {
             speed: 0,
             direction: components::Direction::Right,
+            can_take_damage: true,
         })
         .build();
     create_asteroid(
