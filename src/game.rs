@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread::current};
+use std::collections::HashMap;
 
 use rand::Rng;
 use sdl2::rect::Point;
