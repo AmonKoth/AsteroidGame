@@ -52,7 +52,7 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     }
     if crate::utils::is_key_pressed(&key_manager, "V") {
         crate::utils::key_up(key_manager, "V".to_string());
-        number_asteroids += 20;
+        number_asteroids += 20000;
         create_asteroids_pressed = true;
     }
     if must_create_astroids || create_asteroids_pressed {
@@ -152,7 +152,7 @@ pub fn load_world(ecs: &mut World) {
             rot: 270.0,
         })
         .with(components::Renderable {
-            texture_name: String::from("assets/marco.png"),
+            texture_name: String::from("marco"),
             input_width: 32,
             input_height: 42,
             output_width: 32,
@@ -190,7 +190,7 @@ fn fire_rocket(ecs: &mut World, position: components::Position) {
     ecs.create_entity()
         .with(position)
         .with(components::Renderable {
-            texture_name: String::from("assets/rocket.png"),
+            texture_name: String::from("rocket"),
             input_width: 17,
             input_height: 61,
             output_width: 40,
@@ -207,7 +207,7 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
     ecs.create_entity()
         .with(position)
         .with(components::Renderable {
-            texture_name: String::from("assets/running.png"),
+            texture_name: String::from("enemy"),
             input_width: 33,
             input_height: 45,
             output_width: 33 * asteroid_size_mult,

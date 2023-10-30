@@ -65,6 +65,7 @@ impl<'a> System<'a> for AstroidCollider {
                 return;
             }
         }
+
         for (player_pos, player_render, _, entity) in
             (&positions, &render, &players, &entites).join()
         {

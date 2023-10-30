@@ -1,5 +1,4 @@
 use sdl2::event::Event;
-use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
@@ -14,6 +13,7 @@ pub mod asteroid;
 pub mod components;
 pub mod game;
 pub mod rocket;
+pub mod texture_manager;
 pub mod utils;
 
 // const IMAGE_WIDTH: u32 = 32;
@@ -28,6 +28,7 @@ fn render(
     canvas: &mut WindowCanvas,
     color: Color,
     texture_creator: &TextureCreator<WindowContext>,
+    texture_manager: &texture_manager::TextureManager,
     font: &sdl2::ttf::Font,
     ecs: &World,
 ) -> Result<(), String> {
@@ -56,7 +57,10 @@ fn render(
             renderable.output_width,
             renderable.output_height,
         );
-        let texture = texture_creator.load_texture(&renderable.texture_name)?;
+        // let texture = texture_creator.load_texture(&renderable.texture_name)?;
+        let texture = texture_manager
+            .get_texture(&renderable.texture_name)
+            .unwrap();
         let src = Rect::new(
             (renderable.input_width * renderable.frame) as i32,
             0,
@@ -214,6 +218,7 @@ fn main() -> Result<(), String> {
     let window = video_subsystem
         .window("Astroids", SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32)
         .position_centered()
+        .borderless()
         .build()
         .expect("Failed to crete window Subsytem");
 
@@ -226,6 +231,23 @@ fn main() -> Result<(), String> {
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let font_path: &Path = Path::new(&"assets/Fonts/airstrikeexpand.ttf");
+    let mut texture_manager = texture_manager::TextureManager::new(&texture_creator);
+    texture_manager.load_texture(
+        &String::from("marco"),
+        &String::from("assets/marco.png"),
+        &texture_creator,
+    )?;
+    texture_manager.load_texture(
+        &String::from("enemy"),
+        &String::from("assets/running.png"),
+        &texture_creator,
+    )?;
+    texture_manager.load_texture(
+        &String::from("rocket"),
+        &String::from("assets/rocket.png"),
+        &texture_creator,
+    )?;
+
     let mut font = ttf_context.load_font(font_path, 128)?;
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
@@ -291,6 +313,7 @@ fn main() -> Result<(), String> {
             &mut canvas,
             Color::RGB(0, 0, 0),
             &texture_creator,
+            &texture_manager,
             &font,
             &game_state.ecs,
         )?;

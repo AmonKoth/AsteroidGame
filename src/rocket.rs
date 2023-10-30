@@ -109,7 +109,7 @@ impl<'a> System<'a> for RocketDamage {
                 .insert(
                     new_ast,
                     components::Renderable {
-                        texture_name: String::from("assets/running.png"),
+                        texture_name: String::from("enemy"),
                         input_width: 32,
                         input_height: 42,
                         output_width: 32 * new_asteroid.size_mult,
