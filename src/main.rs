@@ -5,9 +5,10 @@ use sdl2::rect::{Point, Rect};
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::video::WindowContext;
 use specs::{DispatcherBuilder, Join, World, WorldExt};
+
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub mod asteroid;
 pub mod components;
@@ -41,11 +42,11 @@ fn render(
 
     {
         let render_count_text = "Entity amount: ".to_string() + &renderables.count().to_string();
-        let text_position = Rect::new(SCREEN_WIDTH - 200, 0, 100, 20);
+        let text_position = Rect::new(SCREEN_WIDTH - 200, 0, 200, 40);
         render_text(
             &render_count_text,
             text_position,
-            Color::RGBA(0, 255, 0, 255),
+            Color::RGBA(255, 0, 0, 255),
             texture_creator,
             font,
             canvas,
@@ -58,9 +59,7 @@ fn render(
             renderable.output_height,
         );
         // let texture = texture_creator.load_texture(&renderable.texture_name)?;
-        let texture = texture_manager
-            .get_texture(&renderable.texture_name)
-            .unwrap();
+        let texture = texture_manager.get_texture(&renderable.texture_name)?;
         let src = Rect::new(
             (renderable.input_width * renderable.frame) as i32,
             0,
@@ -232,21 +231,9 @@ fn main() -> Result<(), String> {
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let font_path: &Path = Path::new(&"assets/Fonts/airstrikeexpand.ttf");
     let mut texture_manager = texture_manager::TextureManager::new(&texture_creator);
-    texture_manager.load_texture(
-        &String::from("marco"),
-        &String::from("assets/marco.png"),
-        &texture_creator,
-    )?;
-    texture_manager.load_texture(
-        &String::from("enemy"),
-        &String::from("assets/running.png"),
-        &texture_creator,
-    )?;
-    texture_manager.load_texture(
-        &String::from("rocket"),
-        &String::from("assets/rocket.png"),
-        &texture_creator,
-    )?;
+    texture_manager.load_texture(&String::from("marco"), &String::from("assets/marco.png"))?;
+    texture_manager.load_texture(&String::from("enemy"), &String::from("assets/running.png"))?;
+    texture_manager.load_texture(&String::from("rocket"), &String::from("assets/rocket.png"))?;
 
     let mut font = ttf_context.load_font(font_path, 128)?;
     font.set_style(sdl2::ttf::FontStyle::BOLD);
@@ -272,6 +259,10 @@ fn main() -> Result<(), String> {
         .build();
 
     game::load_world(&mut game_state.ecs);
+
+    //FPS counter
+    let mut frame_count = 0;
+    let mut last_second = Instant::now();
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -309,6 +300,23 @@ fn main() -> Result<(), String> {
         // player.rotation = angle;
         dispacher.dispatch(&game_state.ecs);
         game_state.ecs.maintain();
+        frame_count += 1;
+        let elapsed_time = last_second.elapsed().as_secs_f64();
+        let fps_text_pos = Rect::new(SCREEN_WIDTH - 200, 200, 20, 20);
+        if elapsed_time >= 1.0 {
+            let fps = frame_count as f64 / elapsed_time;
+            println!("FPS :{:.2}", fps);
+            render_text(
+                &fps.to_string(),
+                fps_text_pos,
+                Color::RGBA(255, 0, 0, 255),
+                &texture_creator,
+                &font,
+                &mut canvas,
+            )?;
+            frame_count = 0;
+            last_second = Instant::now();
+        }
         render(
             &mut canvas,
             Color::RGB(0, 0, 0),
@@ -317,6 +325,7 @@ fn main() -> Result<(), String> {
             &font,
             &game_state.ecs,
         )?;
+
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 

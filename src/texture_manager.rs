@@ -17,17 +17,18 @@ impl<'a> TextureManager<'a> {
         }
     }
 
-    pub fn load_texture(
-        &mut self,
-        key: &String,
-        path: &String,
-        texture_creator: &'a TextureCreator<WindowContext>,
-    ) -> Result<(), String> {
-        let texture = texture_creator.load_texture(path)?;
+    pub fn load_texture(&mut self, key: &String, path: &String) -> Result<(), String> {
+        let texture = self.loader.load_texture(path)?;
         self.tex_map.insert(key.to_string(), texture);
         Ok(())
     }
-    pub fn get_texture(&self, key: &String) -> Option<&Texture<'a>> {
-        self.tex_map.get(key)
+    pub fn get_texture(&self, key: &String) -> Result<&Texture<'a>, String> {
+        match self.tex_map.get(key) {
+            None => {
+                let error_msg = format!("Texture {} cannot be found", key);
+                Err(error_msg).into()
+            }
+            Some(texture) => Ok(texture),
+        }
     }
 }
