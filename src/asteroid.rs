@@ -3,17 +3,20 @@ use specs::{Join, System, WriteStorage};
 
 pub struct AsteroidMover;
 
-use crate::components;
+use crate::{components, X_GRID_COUNT, Y_GRID_COUNT};
 
 impl<'a> System<'a> for AsteroidMover {
     type SystemData = (
         WriteStorage<'a, components::Position>,
         WriteStorage<'a, components::Renderable>,
         WriteStorage<'a, components::Asteroid>,
+        WriteStorage<'a, components::Collider>,
     );
 
     fn run(&mut self, mut data: Self::SystemData) {
-        for (position, render, asteriod) in (&mut data.0, &mut data.1, &data.2).join() {
+        for (position, render, asteriod, collider) in
+            (&mut data.0, &mut data.1, &data.2, &mut data.3).join()
+        {
             let radians = position.rot.to_radians();
 
             position.pos.x += (asteriod.speed * radians.sin()) as i32;
@@ -36,6 +39,9 @@ impl<'a> System<'a> for AsteroidMover {
                 }
             }
 
+            collider.grid_x = (position.pos.x / 100) * X_GRID_COUNT;
+            collider.grid_y = (position.pos.y / 100) * Y_GRID_COUNT;
+
             render.render_rotation += asteriod.speed;
             if render.render_rotation > 360.0 {
                 render.render_rotation -= 360.0;
@@ -54,11 +60,12 @@ impl<'a> System<'a> for AstroidCollider {
         WriteStorage<'a, components::Renderable>,
         WriteStorage<'a, components::Player>,
         WriteStorage<'a, components::Asteroid>,
+        WriteStorage<'a, components::Collider>,
         Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (positions, render, players, asteroids, entites) = data;
+        let (positions, render, players, asteroids, colliders, entites) = data;
 
         for player in (players).join() {
             if !player.can_take_damage {
@@ -66,10 +73,17 @@ impl<'a> System<'a> for AstroidCollider {
             }
         }
 
-        for (player_pos, player_render, _, entity) in
-            (&positions, &render, &players, &entites).join()
+        for (player_pos, player_render, _, player_colider, entity) in
+            (&positions, &render, &players, &colliders, &entites).join()
         {
-            for (asteroid_pos, asteroid_rend, _) in (&positions, &render, &asteroids).join() {
+            for (asteroid_pos, asteroid_rend, asteroid_collider, _) in
+                (&positions, &render, &colliders, &asteroids).join()
+            {
+                if player_colider.grid_x != asteroid_collider.grid_x
+                    || player_colider.grid_y != asteroid_collider.grid_y
+                {
+                    return;
+                }
                 let diff_x: f64 = ((player_pos.pos.x - asteroid_pos.pos.x) as f64).abs();
                 let diff_y: f64 = ((player_pos.pos.y - asteroid_pos.pos.y) as f64).abs();
                 let hyp: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();

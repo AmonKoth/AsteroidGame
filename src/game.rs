@@ -7,7 +7,7 @@ use specs::{Builder, Join, World, WorldExt};
 const PLAYER_MOVE_SPEED: i32 = 5;
 const MAX_MISSILES: usize = 5;
 
-use crate::components;
+use crate::{components, SCREEN_HEIGHT, SCREEN_WIDTH, X_GRID_COUNT, Y_GRID_COUNT};
 
 pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     let mut must_reload_world = false;
@@ -60,8 +60,10 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
         while asteroid_count < number_asteroids {
             let mut rng = rand::thread_rng();
             let size = rng.gen_range(1..6);
-            let next_x = rng.gen_range(50..crate::SCREEN_WIDTH - 50);
-            let next_y = rng.gen_range(50..crate::SCREEN_HEIGHT - 50);
+            let next_x = rng.gen_range(50..SCREEN_WIDTH - 50);
+            let next_y = rng.gen_range(50..SCREEN_HEIGHT - 50);
+            let grid_x = X_GRID_COUNT * (next_x / 100);
+            let grid_y = Y_GRID_COUNT * (next_y / 100);
             let next_rot = rng.gen_range(0.0..360.0);
 
             let diff_x = ((current_player_pos.pos.x - next_x) as f64).abs();
@@ -74,8 +76,12 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
                 pos: Point::new(next_x, next_y),
                 rot: next_rot,
             };
+            let new_collider = components::Collider {
+                grid_x: grid_x,
+                grid_y: grid_y,
+            };
 
-            create_asteroid(ecs, new_asteroid, size);
+            create_asteroid(ecs, new_asteroid, size, new_collider);
         }
     }
 
@@ -85,11 +91,15 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     };
 
     let mut must_fire_rocket = false;
-
+    let mut player_grid_location = components::Collider {
+        grid_x: 0,
+        grid_y: 0,
+    };
     {
         let mut players = ecs.write_storage::<crate::components::Player>();
         let positions = ecs.read_storage::<crate::components::Position>();
-        for (player, position) in (&mut players, &positions).join() {
+        let grid_location = ecs.read_storage::<crate::components::Collider>();
+        for (player, position, grid) in (&mut players, &positions, &grid_location).join() {
             if crate::utils::is_key_pressed(&key_manager, "D") {
                 player.direction = components::Direction::Right;
                 player.speed = PLAYER_MOVE_SPEED;
@@ -119,6 +129,8 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
                 crate::utils::key_up(key_manager, "Space".to_string());
                 player_position.pos.x = position.pos.x;
                 player_position.pos.y = position.pos.y;
+                player_grid_location.grid_x = grid.grid_x;
+                player_grid_location.grid_y = grid.grid_y;
                 player_position.rot = position.rot + 90.0; // +90 cause player sprite is looking at the side
             } else {
                 must_fire_rocket = false;
@@ -127,7 +139,7 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     }
 
     if must_fire_rocket {
-        fire_rocket(ecs, player_position);
+        fire_rocket(ecs, player_position, player_grid_location);
     }
 }
 pub fn update_player_rotation(ecs: &mut World, mouse_position: Point) {
@@ -166,6 +178,10 @@ pub fn load_world(ecs: &mut World) {
             direction: components::Direction::Right,
             can_take_damage: true,
         })
+        .with(components::Collider {
+            grid_x: 0,
+            grid_y: 0,
+        })
         .build();
     create_asteroid(
         ecs,
@@ -174,13 +190,17 @@ pub fn load_world(ecs: &mut World) {
             rot: 45.0,
         },
         2,
+        components::Collider {
+            grid_x: X_GRID_COUNT * 2,
+            grid_y: Y_GRID_COUNT * 4,
+        },
     );
     ecs.create_entity()
         .with(components::GameData { score: 0, level: 1 })
         .build();
 }
 
-fn fire_rocket(ecs: &mut World, position: components::Position) {
+fn fire_rocket(ecs: &mut World, position: components::Position, collider: components::Collider) {
     {
         let rockets = ecs.read_storage::<crate::components::Rocket>();
         if rockets.count() > MAX_MISSILES - 1 {
@@ -199,11 +219,17 @@ fn fire_rocket(ecs: &mut World, position: components::Position) {
             total_frames: 1,
             render_rotation: 0.0,
         })
+        .with(collider)
         .with(components::Rocket { speed: 10.0 })
         .build();
 }
 
-fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_size_mult: u32) {
+fn create_asteroid(
+    ecs: &mut World,
+    position: components::Position,
+    asteroid_size_mult: u32,
+    collider: components::Collider,
+) {
     ecs.create_entity()
         .with(position)
         .with(components::Renderable {
@@ -221,5 +247,6 @@ fn create_asteroid(ecs: &mut World, position: components::Position, asteroid_siz
             rotation_speed: 0.5,
             size_multiplier: asteroid_size_mult,
         })
+        .with(collider)
         .build();
 }

@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs::{Entities, Join};
 
-use crate::components;
+use crate::{components, X_GRID_COUNT, Y_GRID_COUNT};
 
 pub struct RocketMover;
 
@@ -10,14 +10,21 @@ impl<'a> System<'a> for RocketMover {
         WriteStorage<'a, components::Position>,
         WriteStorage<'a, components::Renderable>,
         ReadStorage<'a, components::Rocket>,
+        WriteStorage<'a, components::Collider>,
         Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut positions, mut renderables, rockets, entities) = data;
+        let (mut positions, mut renderables, rockets, mut colliders, entities) = data;
 
-        for (position, render, rocket, entity) in
-            (&mut positions, &mut renderables, &rockets, &entities).join()
+        for (position, render, rocket, collider, entity) in (
+            &mut positions,
+            &mut renderables,
+            &rockets,
+            &mut colliders,
+            &entities,
+        )
+            .join()
         {
             let radian = position.rot.to_radians();
 
@@ -33,6 +40,9 @@ impl<'a> System<'a> for RocketMover {
             {
                 entities.delete(entity).ok();
             }
+            collider.grid_x = (position.pos.x / 100) * X_GRID_COUNT;
+            collider.grid_y = (position.pos.y / 100) * Y_GRID_COUNT;
+
             render.render_rotation = position.rot;
         }
     }
@@ -48,18 +58,26 @@ impl<'a> System<'a> for RocketDamage {
         WriteStorage<'a, components::Asteroid>,
         WriteStorage<'a, components::Player>,
         WriteStorage<'a, components::GameData>,
+        WriteStorage<'a, components::Collider>,
         Entities<'a>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (positions, renderers, rockets, asteroids, _players, _, entities) = &data;
+        let (positions, renderers, rockets, asteroids, _players, _, colliders, entities) = &data;
         let mut asteroid_creation = Vec::<components::PendingAsteroid>::new();
         let mut score: u32 = 0;
 
-        for (rocket_pos, _, _, rocket_entity) in (positions, renderers, rockets, entities).join() {
-            for (asteroid_pos, asteroid_render, asteroid, asteroid_entity) in
-                (positions, renderers, asteroids, entities).join()
+        for (rocket_pos, _, _, rocket_collider, rocket_entity) in
+            (positions, renderers, rockets, colliders, entities).join()
+        {
+            for (asteroid_pos, asteroid_render, asteroid, asteroid_collider, asteroid_entity) in
+                (positions, renderers, asteroids, colliders, entities).join()
             {
+                if rocket_collider.grid_x != asteroid_collider.grid_x
+                    || rocket_collider.grid_y != asteroid_collider.grid_y
+                {
+                    return;
+                }
                 let diff_x: f64 = ((rocket_pos.pos.x - asteroid_pos.pos.x) as f64).abs();
                 let diff_y: f64 = ((rocket_pos.pos.y - asteroid_pos.pos.y) as f64).abs();
                 let hyp: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
@@ -67,23 +85,24 @@ impl<'a> System<'a> for RocketDamage {
                     score += asteroid.size_multiplier;
                     entities.delete(asteroid_entity).ok();
                     entities.delete(rocket_entity).ok();
-                    if asteroid.size_multiplier > 1 {
-                        asteroid_creation.push(components::PendingAsteroid {
-                            position: asteroid_pos.pos,
-                            rot: asteroid_pos.rot - 90.0,
-                            size_mult: asteroid.size_multiplier / 2,
-                        });
-                        asteroid_creation.push(components::PendingAsteroid {
-                            position: asteroid_pos.pos,
-                            rot: asteroid_pos.rot + 90.0,
-                            size_mult: asteroid.size_multiplier / 2,
-                        });
-                    }
+                    // if asteroid.size_multiplier > 1 {
+                    //     asteroid_creation.push(components::PendingAsteroid {
+                    //         position: asteroid_pos.pos,
+                    //         rot: asteroid_pos.rot - 90.0,
+                    //         size_mult: asteroid.size_multiplier / 2,
+                    //     });
+                    //     asteroid_creation.push(components::PendingAsteroid {
+                    //         position: asteroid_pos.pos,
+                    //         rot: asteroid_pos.rot + 90.0,
+                    //         size_mult: asteroid.size_multiplier / 2,
+                    //     });
+
+                    // }
                 }
             }
         }
 
-        let (mut positions, mut renderers, _, mut asteroids, _, _, entities) = data;
+        let (mut positions, mut renderers, _, mut asteroids, _, _, mut colliders, entities) = data;
         for new_asteroid in asteroid_creation {
             let new_ast = entities.create();
             positions
@@ -120,8 +139,17 @@ impl<'a> System<'a> for RocketDamage {
                     },
                 )
                 .ok();
+            colliders
+                .insert(
+                    new_ast,
+                    components::Collider {
+                        grid_x: (new_asteroid.position.x / 100) * X_GRID_COUNT,
+                        grid_y: (new_asteroid.position.y / 100) * Y_GRID_COUNT,
+                    },
+                )
+                .ok();
         }
-        let (_, _, _, _, _, mut gamedatas, _) = data;
+        let (_, _, _, _, _, mut gamedatas, _, _) = data;
         for mut gamedata in (&mut gamedatas).join() {
             gamedata.score += score;
         }

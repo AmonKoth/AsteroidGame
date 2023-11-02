@@ -55,3 +55,8 @@ pub struct GameData {
     pub score: u32,
     pub level: u32,
 }
+#[derive(Component)]
+pub struct Collider {
+    pub grid_x: i32,
+    pub grid_y: i32,
+}

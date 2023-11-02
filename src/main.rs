@@ -23,6 +23,9 @@ pub mod utils;
 
 const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
+const GRID_SIZE: i32 = 100;
+const X_GRID_COUNT: i32 = SCREEN_WIDTH / GRID_SIZE;
+const Y_GRID_COUNT: i32 = SCREEN_HEIGHT / GRID_SIZE;
 
 fn render(
     canvas: &mut WindowCanvas,
@@ -73,9 +76,10 @@ fn render(
 fn update_player(ecs: &World) {
     use components::Direction::*;
     let players = ecs.read_storage::<components::Player>();
+    let mut collisions = ecs.write_storage::<components::Collider>();
     let mut positions = ecs.write_storage::<components::Position>();
 
-    for (player, position) in (&players, &mut positions).join() {
+    for (player, position, collider) in (&players, &mut positions, &mut collisions).join() {
         match player.direction {
             Left => {
                 position.pos = position.pos.offset(-player.speed, 0);
@@ -102,6 +106,8 @@ fn update_player(ecs: &World) {
         if position.pos.y < 0 {
             position.pos.y += SCREEN_HEIGHT;
         }
+        collider.grid_x = X_GRID_COUNT * (position.pos.x / 100);
+        collider.grid_y = Y_GRID_COUNT * (position.pos.y / 100);
     }
 }
 
@@ -156,6 +162,7 @@ fn main() -> Result<(), String> {
     game_state.ecs.register::<components::Asteroid>();
     game_state.ecs.register::<components::Rocket>();
     game_state.ecs.register::<components::GameData>();
+    game_state.ecs.register::<components::Collider>();
 
     let mut dispacher = DispatcherBuilder::new()
         .with(asteroid::AsteroidMover, "asteroid_mover", &[])
