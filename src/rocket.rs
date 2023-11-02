@@ -64,7 +64,7 @@ impl<'a> System<'a> for RocketDamage {
 
     fn run(&mut self, data: Self::SystemData) {
         let (positions, renderers, rockets, asteroids, _players, _, colliders, entities) = &data;
-        let mut asteroid_creation = Vec::<components::PendingAsteroid>::new();
+        // let mut asteroid_creation = Vec::<components::PendingAsteroid>::new();
         let mut score: u32 = 0;
 
         for (rocket_pos, _, _, rocket_collider, rocket_entity) in
@@ -102,53 +102,53 @@ impl<'a> System<'a> for RocketDamage {
             }
         }
 
-        let (mut positions, mut renderers, _, mut asteroids, _, _, mut colliders, entities) = data;
-        for new_asteroid in asteroid_creation {
-            let new_ast = entities.create();
-            positions
-                .insert(
-                    new_ast,
-                    components::Position {
-                        pos: new_asteroid.position,
-                        rot: new_asteroid.rot,
-                    },
-                )
-                .ok();
-            asteroids
-                .insert(
-                    new_ast,
-                    components::Asteroid {
-                        speed: 6.0,
-                        rotation_speed: 2.0,
-                        size_multiplier: new_asteroid.size_mult,
-                    },
-                )
-                .ok();
-            renderers
-                .insert(
-                    new_ast,
-                    components::Renderable {
-                        texture_name: String::from("enemy"),
-                        input_width: 32,
-                        input_height: 42,
-                        output_width: 32 * new_asteroid.size_mult,
-                        output_height: 42 * new_asteroid.size_mult,
-                        frame: 1,
-                        total_frames: 9,
-                        render_rotation: 0.0,
-                    },
-                )
-                .ok();
-            colliders
-                .insert(
-                    new_ast,
-                    components::Collider {
-                        grid_x: (new_asteroid.position.x / 100) * X_GRID_COUNT,
-                        grid_y: (new_asteroid.position.y / 100) * Y_GRID_COUNT,
-                    },
-                )
-                .ok();
-        }
+        // let (mut positions, mut renderers, _, mut asteroids, _, _, mut colliders, entities) = data;
+        // for new_asteroid in asteroid_creation {
+        //     let new_ast = entities.create();
+        //     positions
+        //         .insert(
+        //             new_ast,
+        //             components::Position {
+        //                 pos: new_asteroid.position,
+        //                 rot: new_asteroid.rot,
+        //             },
+        //         )
+        //         .ok();
+        //     asteroids
+        //         .insert(
+        //             new_ast,
+        //             components::Asteroid {
+        //                 speed: 6.0,
+        //                 rotation_speed: 2.0,
+        //                 size_multiplier: new_asteroid.size_mult,
+        //             },
+        //         )
+        //         .ok();
+        //     renderers
+        //         .insert(
+        //             new_ast,
+        //             components::Renderable {
+        //                 texture_name: String::from("enemy"),
+        //                 input_width: 32,
+        //                 input_height: 42,
+        //                 output_width: 32 * new_asteroid.size_mult,
+        //                 output_height: 42 * new_asteroid.size_mult,
+        //                 frame: 1,
+        //                 total_frames: 9,
+        //                 render_rotation: 0.0,
+        //             },
+        //         )
+        //         .ok();
+        //     colliders
+        //         .insert(
+        //             new_ast,
+        //             components::Collider {
+        //                 grid_x: (new_asteroid.position.x / 100) * X_GRID_COUNT,
+        //                 grid_y: (new_asteroid.position.y / 100) * Y_GRID_COUNT,
+        //             },
+        //         )
+        //         .ok();
+        // }
         let (_, _, _, _, _, mut gamedatas, _, _) = data;
         for mut gamedata in (&mut gamedatas).join() {
             gamedata.score += score;
