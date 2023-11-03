@@ -23,7 +23,7 @@ pub mod utils;
 
 const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
-const GRID_SIZE: i32 = 100;
+const GRID_SIZE: i32 = 200;
 const X_GRID_COUNT: i32 = SCREEN_WIDTH / GRID_SIZE;
 const Y_GRID_COUNT: i32 = SCREEN_HEIGHT / GRID_SIZE;
 
@@ -106,8 +106,8 @@ fn update_player(ecs: &World) {
         if position.pos.y < 0 {
             position.pos.y += SCREEN_HEIGHT;
         }
-        collider.grid_x = X_GRID_COUNT * (position.pos.x / 100);
-        collider.grid_y = Y_GRID_COUNT * (position.pos.y / 100);
+        collider.grid_x = X_GRID_COUNT * (position.pos.x / GRID_SIZE);
+        collider.grid_y = Y_GRID_COUNT * (position.pos.y / GRID_SIZE);
     }
 }
 

@@ -7,7 +7,7 @@ use specs::{Builder, Join, World, WorldExt};
 const PLAYER_MOVE_SPEED: i32 = 5;
 const MAX_MISSILES: usize = 5;
 
-use crate::{components, SCREEN_HEIGHT, SCREEN_WIDTH, X_GRID_COUNT, Y_GRID_COUNT};
+use crate::{components, GRID_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH, X_GRID_COUNT, Y_GRID_COUNT};
 
 pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
     let mut must_reload_world = false;
@@ -62,8 +62,8 @@ pub fn update(ecs: &mut World, key_manager: &mut HashMap<String, bool>) {
             let size = rng.gen_range(1..6);
             let next_x = rng.gen_range(50..SCREEN_WIDTH - 50);
             let next_y = rng.gen_range(50..SCREEN_HEIGHT - 50);
-            let grid_x = X_GRID_COUNT * (next_x / 100);
-            let grid_y = Y_GRID_COUNT * (next_y / 100);
+            let grid_x = X_GRID_COUNT * (next_x / GRID_SIZE);
+            let grid_y = Y_GRID_COUNT * (next_y / GRID_SIZE);
             let next_rot = rng.gen_range(0.0..360.0);
 
             let diff_x = ((current_player_pos.pos.x - next_x) as f64).abs();

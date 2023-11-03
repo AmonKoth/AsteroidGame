@@ -3,7 +3,7 @@ use specs::{Join, System, WriteStorage};
 
 pub struct AsteroidMover;
 
-use crate::{components, X_GRID_COUNT, Y_GRID_COUNT};
+use crate::{components, GRID_SIZE, X_GRID_COUNT, Y_GRID_COUNT};
 
 impl<'a> System<'a> for AsteroidMover {
     type SystemData = (
@@ -39,8 +39,8 @@ impl<'a> System<'a> for AsteroidMover {
                 }
             }
 
-            collider.grid_x = (position.pos.x / 100) * X_GRID_COUNT;
-            collider.grid_y = (position.pos.y / 100) * Y_GRID_COUNT;
+            collider.grid_x = (position.pos.x / GRID_SIZE) * X_GRID_COUNT;
+            collider.grid_y = (position.pos.y / GRID_SIZE) * Y_GRID_COUNT;
 
             render.render_rotation += asteriod.speed;
             if render.render_rotation > 360.0 {
@@ -73,17 +73,17 @@ impl<'a> System<'a> for AstroidCollider {
             }
         }
 
-        for (player_pos, player_render, _, player_colider, entity) in
+        for (player_pos, player_render, _, _player_colider, entity) in
             (&positions, &render, &players, &colliders, &entites).join()
         {
-            for (asteroid_pos, asteroid_rend, asteroid_collider, _) in
+            for (asteroid_pos, asteroid_rend, _asteroid_collider, _) in
                 (&positions, &render, &colliders, &asteroids).join()
             {
-                if player_colider.grid_x != asteroid_collider.grid_x
-                    || player_colider.grid_y != asteroid_collider.grid_y
-                {
-                    return;
-                }
+                // if player_colider.grid_x != asteroid_collider.grid_x
+                //     || player_colider.grid_y != asteroid_collider.grid_y
+                // {
+                //     return;
+                // }
                 let diff_x: f64 = ((player_pos.pos.x - asteroid_pos.pos.x) as f64).abs();
                 let diff_y: f64 = ((player_pos.pos.y - asteroid_pos.pos.y) as f64).abs();
                 let hyp: f64 = ((diff_x * diff_x) + (diff_y * diff_y)).sqrt();
